@@ -87,15 +87,16 @@ extern "C" void mbed_reset();
 int main() 
 {
   systime.start();
-  //float x, y, z;
   eth_speed = 1;
-  
   dsp = new LaosDisplay();
-  printf( VERSION_STRING "...\nBOOT...\n" ); 
+
+  printf( NL "" NL __FILE__ "" NL "" __DATE__ " " __TIME__ "\n" "" NL);
+  printf( VERSION_STRING "...\nBOOT..." NL ); 
+
   mnu = new LaosMenu(dsp);
   eth_speed=0;
 
- printf("TEST SD...\n"); 
+  printf("TEST SD..." NL); 
   char testfile[] = "test.txt";
   FILE *fp = sd.openfile(testfile, "wb");
   if ( fp == NULL )
@@ -106,7 +107,7 @@ int main()
   }
   else
   {
-    printf("SD: READY...\n");
+    printf("SD: READY..." NL);
     fclose(fp);
     removefile(testfile);
   }
@@ -116,59 +117,62 @@ int main()
   if (SDcheckFirmware()) mbed_reset();
   
   mnu->SetScreen(VERSION_STRING);
-  printf("START...\n");
+  printf("START..." VERSION_STRING "" NL);
+
   cfg =  new GlobalConfig("config.txt");
   mnu->SetScreen("CONFIG OK...."); 
-  printf("CONFIG OK...\n");
+  printf("CONFIG OK..." NL);
+
   if (!cfg->nodisplay)
     dsp->testI2C();
   
-  printf("MOTION...\n"); 
+  printf("MOTION..." NL); 
   mot = new LaosMotion();
     
   eth = EthConfig();
   eth_speed=1;
       
-  printf("SERVER...\n");
+  printf("SERVER..." NL);
   srv = new TFTPServer(cfg->port);
   mnu->SetScreen("SERVER OK...."); 
   wait(0.5);
   mnu->SetScreen(10); // IP
   wait(1.0);
   
-  printf("RUN...\n");
+  printf("RUN..." NL);
   
   // Wait for key, and then home
   
   if ( cfg->autohome )
   {
-    printf("WAIT FOR COVER...\n");
+    printf("WAIT FOR COVER..." NL);
     wait(1);
   
   
   // Start homing
-    mnu->SetScreen("WAIT FOR COVER....");
-    //if ( cfg->waitforstart ) 
-      while ( !mot->isStart() );
+    mnu->SetScreen("WAIT FOR COVER... ");
+    while ( !mot->isStart() );
+    mnu->SetScreen("WAIT FOR COVER... closed now ");
+
     mnu->SetScreen("HOME....");
-    printf("HOME...\n");
+    printf("HOME..." NL);
 
     mot->home(cfg->xhome,cfg->yhome, cfg->zhome);
     // if ( !mot->isHome ) exit(1);
-    printf("HOME DONE. (%d,%d, %d)\n",cfg->xhome,cfg->yhome,cfg->zhome);
+    printf("HOME DONE. (%d,%d, %d)" NL,cfg->xhome,cfg->yhome,cfg->zhome);
   }
   else
-    printf("Homing skipped: %d\n", cfg->autohome);
+    printf("Homing skipped: %d" NL, cfg->autohome);
 
   // clean sd card?
   if (cfg->cleandir) cleandir();
   mnu->SetScreen("");  
 
   if (cfg->nodisplay) {
-    printf("No display set\n\r");
+    printf("No display set" NL);
     main_nodisplay();
   } else {
-    printf("Entering display\n\r");
+    printf("Entering display" NL);
     main_menu();
   }
 }
@@ -185,18 +189,19 @@ void main_nodisplay() {
     while (srv->State() == listen)
         srv->poll();
     if (srv->State() != listen) {
-      mnu->SetScreen("Receive file");
+      mnu->SetScreen("Receivng file");
       while ((! mnu->Cancel()) && (srv->State() != listen)) srv->poll();
+      mnu->SetScreen("..done");
     }
     if (filecnt < srv->fileCnt()) {
       mot->reset();
       plan_get_current_position_xyz(&x, &y, &z);
-       printf("%f %f\n", x,y); 
+       printf("%f %f" NL, x,y); 
        mnu->SetScreen("Laser BUSY..."); 
     
        char name[32];
        srv->getFilename(name);
-       printf("Now processing file: '%s'\n\r", name);
+       printf("Now processing file: '%s'" NL, name);
        FILE *in = sd.openfile(name, "r");
        while (!feof(in))
        { 
@@ -206,7 +211,7 @@ void main_nodisplay() {
        fclose(in);
        removefile(name);
        // done
-       printf("DONE!...\n");
+       printf("DONE!..." NL);
 	   while (!mot->ready() );
        mot->moveToAbsolute(cfg->xrest, cfg->yrest, cfg->zrest);
     }
@@ -232,16 +237,16 @@ void main_menu() {
       if (isFirmware(myname)) {
         installFirmware(myname);
         mnu->SetScreen(1);
-      } else {
-        if (strcmp("config.txt", myname) == 0) {
+      } else 
+      if (strcmp("config.txt", myname) == 0) {
           // it's a config file!
           mnu->SetScreen(1);
-        } else {
-          if (isLaosFile(myname)) {
+      } else 
+      if (isLaosFile(myname)) {
             mnu->SetFileName(myname);
             mnu->SetScreen(2);
-          }
-        }
+      } else {
+         printf("File %s ignored" NL, myname);
       }
     }           
   }

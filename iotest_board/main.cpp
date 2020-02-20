@@ -39,7 +39,10 @@ SDFileSystem sd(p11, p12, p13, p14, "sd");
 EthernetInterface eth;
 
 // Analog in/out (cover sensor) + NC
-DigitalIn cover(p19);
+DigitalIn cover(p19); // AIN on J14
+
+// Analog in - temperature sensor solid state laser
+AnalogIn  temp(p18); // AOUT in J14
 
 // I2C
 I2C i2c(p9, p10);        // sda, scl
@@ -104,6 +107,28 @@ void home()
 
 #define TEST(c,x) case c: io = &x; x = !x; printf("Test %c: " #x " is now %s \n\r", c, (x ? "ON" : "OFF")); break 
 
+float raw2volt(unsigned short raw) {
+  const float VCC = 3.3f;
+  return raw * VCC / (1<<16);
+}
+
+float volt2temp(float Vin) {
+  #define K2C (273.15) // 0 C in Kelvin
+  #define T25 (K2C + 25.0f) // 25 C in Kelvin
+
+  // NTC resistor spec from datasheet.
+  #define Rt  (10*1000.f)       // At 25 C
+  #define B  (3435.0f)          
+
+  // Reference voltage and resistor to ground.
+  #define Vref (2.495f)
+  #define Rref  (10*1000.f)
+
+  // float r = Rref * (Vref/Vin- 1);
+
+  return 1.0f / ( log((Vref/Vin- 1))/B + 1/T25) - K2C;
+}
+
 /**
 *** main()
 **/
@@ -111,10 +136,13 @@ int main()
 {
   // enable serial communication
   pc.baud(115200);
+  printf("Started: " __FILE__ "\n\r");
+  printf("  build: " __DATE__ " " __TIME__ "\n\r");
 
   // enable I2C display communcation
   i2c.frequency(_I2C_BAUD);
 
+  printf("Setting up network\n\r");
   // test networking 
   eth.init();
   eth.connect();
@@ -144,7 +172,7 @@ int main()
    "c: Can bus test\n\r"
    "sS: SD-Card test (s=test file, S=speed test)\n\r"
    "i: I2C\n\r"
-   "1/2/3/4: Toggle outputs\n\r"
+   "1/2/3/4: Toggle outputs 1=pwm, 2=Lenable, 3=exaust, 4=Lon\n\r"
    "f: apply 1Khz frequency to last IO line (1 second)\n\r"
    "h: X/Y homing (note: direction and home sensor polarity may be wrong\n\r";
   char iline[] = " LAOS-IOTEST V1.1";
@@ -286,7 +314,8 @@ int main()
     }
     if ( test ) 
     {
-      printf("xhome=%d, yhome=%d, zmin=%d, zmax=%d, cover=%s\n\r", (int)xhome, (int)yhome, (int)zmin, (int)zmax, (cover ? "OPEN" : "CLOSED") );
+      printf("xhome=%d, yhome=%d, zmin=%d, zmax=%d, cover=%s temp=%u/%.1f%%%/%.4fV/%fC\n\r", (int)xhome, (int)yhome, (int)zmin, (int)zmax, (cover ? "OPEN" : "CLOSED"), 
+		temp.read_u16(), temp.read()*100.0f, raw2volt(temp.read_u16()), volt2temp(raw2volt(temp.read_u16())));
     }
   }
 }

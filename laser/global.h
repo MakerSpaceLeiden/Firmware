@@ -22,6 +22,8 @@
  */
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
+
+#define NL "\n"
  
 #include "mbed.h"
 #include <string>
@@ -40,7 +42,7 @@ public:
 
   IPAddress ip, gw, nm, dns;
   int port, dhcp;  // network settings
-  int enable; // enable state (1 or 0)
+//XX  int enable; // enable state (1 or 0)
   int autohome; // automatically home the axis at startup
   int autozhome; // automatically home the zaxis as well
   int nodisplay; // there is no display 
@@ -63,7 +65,10 @@ public:
   int yscale; // steps per meter
   int zscale; // steps per meter
   int escale; // steps per meter
-  int lenable, lon, pwmmin, pwmmax, pwmfreq; // laser enable, laser on and pwm min/max [%] and frequency [Hz];
+  // Pins used and polarity for 'on/active'.
+  PinName laser_enable_pin, laser_on_pin, laser_pwm_pin, laser_temp_pin, cover_pin, exhaust_pin;
+  bool laser_enable_polarity, laser_on_polarity, laser_pwm_polarity, exhaust_polarity, cover_polarity;
+  int pwmmin, pwmmax, pwmfreq; // pwm min/max [%] and frequency [Hz];
   int exhaust, exhaust_offdelay; // How long to continue powering air 
   int dir_us, pulse_us; // extra wait time for longer pulse/dir
 	// nozzle/exhaust after job has ended (seconds).

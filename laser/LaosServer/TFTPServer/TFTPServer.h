@@ -50,7 +50,7 @@
 #define TFTP_PORT 69
 //#define TFTP_DEBUG(x) printf("%s\n\r", x);
 
-enum TFTPServerState { listen, reading, writing, tftperror, suspended, deleted }; 
+enum TFTPServerState { back_to_listen, listen, reading, writing, tftperror, suspended, deleted }; 
 
 class TFTPServer {
 
@@ -101,6 +101,7 @@ private:
     // void onListenUDPSocketEvent(UDPSocketEvent e);
     int port; // The TFTP port
     UDPSocket* ListenSock;      // main listening socket (dflt: UDP port 69)
+    UDPSocket* WorkSock;      // main listening socket (dflt: UDP port 69)
     TFTPServerState state;      // current TFTP server state
     char* remote_ip;         // connected remote Host IP
     int remote_port;            // connected remote Host Port

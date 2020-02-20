@@ -134,7 +134,7 @@ void st_init(void)
     pwmscale = div_f(to_fixed(cfg->pwmmax - cfg->pwmmin), to_fixed(100) );
   printf("ofs: %lu, scale: %lu\n", pwmofs, pwmscale);
   actpos_x = actpos_y = actpos_z = actpos_e = 0;
-  st_wake_up();
+  // st_wake_up(); -- not sure if this is right to change - but right now we have the laser firing during startup. Not nice.
   trapezoid_tick_cycle_counter = 0;
   st_go_idle();  // Start in the idle state
 }
@@ -196,10 +196,10 @@ void st_wake_up()
     running = 1;
     s_CurrentTimerPeriod = 0; // force an update in set_step_timer
     set_step_timer(2000);
-    laser_enable = cfg->lenable;
-    exhaust = 1; // turn air assist/exhaust on
+    LaserSet(LASER_ENABLED,0);
+    setExhaust(true);
     exhaust_timer.detach(); // cancel any pending timer
-  //  printf("wake_up()..\n");
+    printf("wake_up()..\n");
   }
 }
 
@@ -211,12 +211,11 @@ static void st_go_idle()
   timer.detach();
   running = 0;
   clear_all_step_pins();
-  *laser = LASEROFF;
-  pwm = cfg->pwmmax / 100.0;  // set pwm to max;
-  laser_enable = !cfg->lenable; // disable the laser
+  LaserSet(LASER_OFF,0);
+
   exhaust_timer.attach(&exhaust_off, cfg->exhaust_offdelay);
 	// when job completes turn off air assist/exhaust after
-//  printf("idle()..\n");
+  printf("idle()..\n");
 }
 
 // return number of steps to perform:  n = (v^2) / (2*a)
@@ -283,19 +282,10 @@ static inline void trapezoid_generator_reset()
 // Set the step timer. Note: this starts the ticker at an interval of "cycles"
 static inline void set_step_timer (uint32_t cycles)
 {
-   extern GlobalConfig *cfg;
-   volatile static double p;
    if(s_CurrentTimerPeriod != cycles)
    {
      s_CurrentTimerPeriod = cycles;
      timer.attach_us(&st_interrupt,cycles);
-   // p = to_double(pwmofs + mul_f( pwmscale, ((power>>6) * c_min) / ((10000>>6)*cycles) ) );
-   // p = ( to_double(c_min) * current_block->power) / ( 10000.0 * (double)cycles);
-  // p = (60E6/nominal_rate) / cycles; // nom_rate is steps/minute,
-   //printf("%f,%f,%f\n\r", (float)(60E6/nominal_rate), (float)cycles, (float)p);
-  // printf("%d: %f %f\n\r", (int)current_block->power, (float)p, (float)c_min/(float(c) ));
-     p = (double)(cfg->pwmmin/100.0 + ((current_block->power/10000.0)*((cfg->pwmmax - cfg->pwmmin)/100.0)));
-     pwm = p;
    }
 }
 
@@ -351,7 +341,8 @@ static  void st_interrupt (void)
    // this block is a bitmap engraving line, read laser on/off status from buffer
    if ( current_block->options & OPT_BITMAP )
    {
-      *laser =  ! (bitmap[pos_l / 32] & (1 << (pos_l % 32)));
+     bool on = ! (bitmap[pos_l / 32] & (1 << (pos_l % 32)));
+     LaserSet(on ? LASER_FIRING : LASER_ENABLED, (double)(cfg->pwmmin/100.0 + ((current_block->power/10000.0)*((cfg->pwmmax - cfg->pwmmin)/100.0))));
       counter_l += bitmap_width;
      //  printf("%d %d %d: %d %d %c\n\r", bitmap_width, pos_l, counter_l,  pos_l / 32, pos_l % 32, (*laser ?  '1' : '0' ));
       if (counter_l > 0)
@@ -363,7 +354,8 @@ static  void st_interrupt (void)
    }
    else
    {
-     *laser = ( current_block->options & OPT_LASER_ON ? LASERON : LASEROFF);
+     LaserSet((current_block->options & OPT_LASER_ON) ? LASER_FIRING : LASER_ENABLED, 
+	(double)(cfg->pwmmin/100.0 + ((current_block->power/10000.0)*((cfg->pwmmax - cfg->pwmmin)/100.0))));
    }
 
     if (current_block->action_type == AT_MOVE)
@@ -485,8 +477,8 @@ void st_synchronize()
 
 void exhaust_off()
 {
-    exhaust = 0;
-    exhaust_timer.detach();
+ setExhaust(false);
+ exhaust_timer.detach();
 }
 
 // print debugging data for a block

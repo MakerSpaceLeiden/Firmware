@@ -65,10 +65,8 @@ LaosMotion::LaosMotion()
   int i=0;
   Timer t;
 #endif
-  pwm.period(1.0 / cfg->pwmfreq);
-  pwm = cfg->pwmmin/100.0;
-  if ( laser == NULL ) laser = new DigitalOut(LASER_PIN);
-  *laser = LASEROFF;
+  LaserInit();
+  TempInit();
 
   mark_speed = cfg->speed;
   //start.mode(PullUp);
@@ -127,7 +125,6 @@ LaosMotion::~LaosMotion()
 **/
 void LaosMotion::reset()
 {
-  extern GlobalConfig *cfg;
   #ifdef READ_FILE_DEBUG
     printf("LaosMotion::reset()\n");
   #endif
@@ -135,9 +132,7 @@ void LaosMotion::reset()
   m_PlannedXAbsolute = 0;
   m_PlannedYAbsolute = 0;
   m_PlannedZAbsolute = 0;
-  *laser = LASEROFF;
-  enable = cfg->enable;
-  cover.mode(PullUp);
+  LaserSet(LASER_OFF, 0);
 }
 
 
@@ -274,9 +269,10 @@ void LaosMotion::write(int i)
                   while ( queue() ); // printf("*"); // wait for queue to empty
                   plan_set_accel(cfg->accel);
                 }
-                else
+                else {
                   plan_buffer_line(&action);
                   UpdatePlannedCoordinates(&action);
+                };
                 break;
             }
             break;
@@ -374,6 +370,7 @@ void LaosMotion::write(int i)
             break;
          default: // I do not understand: stop motion
             step = 0;
+	    printf("Motion not understood. Aborting.\n");
             break;
     }
     if ( step )
@@ -387,7 +384,7 @@ void LaosMotion::write(int i)
 **/
 bool LaosMotion::isStart()
 {
-  return cover;
+  return coverClosed();
 }
 
 /**
@@ -487,8 +484,6 @@ void LaosMotion::MakeCurrentPositionOrigin()
   setOriginAbsolute(x, y, z);
 }
 
-
-
 /**
 *** Home the axis, stop when both home switches are pressed
 **/
@@ -534,7 +529,6 @@ void LaosMotion::home(int x, int y, int z)
       return;
     }
   }
-
 }
 
 

@@ -21,6 +21,7 @@
  * 
  */
 #include "global.h"
+#include "pins.h"
 
 /**
 *** Return a IpAddress, from a string in the format: ppp.qqq.rrr.sss
@@ -79,19 +80,36 @@ GlobalConfig::GlobalConfig(const std::string& filename)
     cfg.Value("sys.disablecancelcheck", &disablecancelcheck, 0);
     
     // Laser
-    cfg.Value("laser.enable", &lenable, 1); // laser enable polarity [0/1]
-    cfg.Value("laser.on", &lon, 1);         // laser on polarity [0/1]
+    cfg.Value("laser.enable_pin", &laser_enable_pin, LAOS_LASER_ENABLE);
+    cfg.Value("laser.enable", &laser_enable_polarity, LAOS_LASER_ENABLE_POLARIY);// laser enable polarity [0/1]
+
+    cfg.Value("laser.on_pin", &laser_on_pin, LAOS_LASER_ON);
+    cfg.Value("laser.on", &laser_on_polarity, LAOS_LASER_ON_POLARIY);         	// laser on polarity [0/1]
+
+    cfg.Value("laser.pwm_pin", &laser_pwm_pin, LAOS_LASER_PWM);
+    cfg.Value("laser.pwm", &laser_pwm_polarity, LAOS_LASER_PWM_POLARIY);        // laser pwm polarity [0/1]
+
     cfg.Value("laser.pwm.min", &pwmmin, 0); // pwm at minimum power [0..100]
     cfg.Value("laser.pwm.max", &pwmmax, 0); // pwm at maximum power [0..100]
     cfg.Value("laser.pwm.freq", &pwmfreq, 20000); // pwm frequency [Hz]
+
+    cfg.Value("sys.exhaust_pin", &exhaust_pin, p6); 
+    cfg.Value("sys.exhaust_polarity", &exhaust_polarity, 1); 
+    // how long to continue air assist/extract after job completion (secs)
     cfg.Value("sys.exhaustoffdelay", &exhaust_offdelay, 30); 
-	// how long to continue air assist/extract after job completion (secs)
-    
+
+    cfg.Value("sys.cover_pin", &cover_pin, p19); 
+    cfg.Value("sys.cover_polarity", &cover_polarity, 1); 
+   
+    // When connected - defaults to NC. 
+    cfg.Value("laser.temp_pin", &laser_temp_pin, LAOS_TEMP);
+
     // rest position (after homing)
     cfg.Value("x.rest", &xrest, 0);
     cfg.Value("y.rest", &yrest, 0);
     cfg.Value("z.rest", &zrest, 0);
     cfg.Value("e.rest", &erest, 0);
+
  // (homing) direction
     cfg.Value("x.homedir", &xhomedir, 0);
     cfg.Value("y.homedir", &yhomedir, 0);
@@ -150,11 +168,11 @@ GlobalConfig::GlobalConfig(const std::string& filename)
     cfg.Value("motion.zhomespeed", &zhomespeed, 10); // z-axis speed during homing [usec/step]
     cfg.Value("motion.speed", &speed, 100);   // max speed [mm/sec]
     cfg.Value("motion.accel", &accel, 100); // accelleration [mm/sec2]
-    cfg.Value("motion.enable", &enable, 0); // enable output polarity [0/1]
+//XX    cfg.Value("motion.enable", &enable, 0); // enable output polarity [0/1]
     cfg.Value("motion.tolerance", &tolerance, 50); // cornering tolerance [1/1000 units]
 
- 	cfg.Value("dir_us", &dir_us, 0);
-	cfg.Value("pulse_us", &pulse_us, 0);
+    cfg.Value("dir_us", &dir_us, 0);
+    cfg.Value("pulse_us", &pulse_us, 0);
 }
 
 // get the configured bed height (y.max - y.min), or 0 if undefined

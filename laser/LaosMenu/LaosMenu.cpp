@@ -36,7 +36,7 @@ static const char *menus[] = {
     "ORIGIN",      //8
     "REMOVE ALL JOBS", //9
     "IP",          //10
-    "REBOOT", //11
+    "REBOOT", 	//11
     "LASER TEST", //12
     // "POWER / SPEED",//12
     // "IO", //13
@@ -119,7 +119,7 @@ static const char *screens[] = {
     "                ",
 
 #define RUNNING (ANALYZING+1)
-    "RUNNING...      "
+    "RUNNING... $$$$$"
     "[cancel]        ",
 
 #define BUSY (RUNNING+1)
@@ -646,18 +646,26 @@ void LaosMenu::Handle() {
                 break;
 
             case LASERTEST: 
-                enable = !cfg->enable;
+                //XX enable = !cfg->enable;
                 switch ( c ) {
                     case K_OK: 
                         waitup = 1;
                         if(m_LaserTestTime > 0)
                         {
+printf("Starting laser test\n");
                             double p = (double)(cfg->pwmmin/100.0 + ((m_LaserTestPower/100.0)*((cfg->pwmmax - cfg->pwmmin)/100.0)));
-                            pwm = p;
-                            *laser = LASERON;
+ 			    LaserSet(LASER_ENABLED,0);
+printf("  1. laser enabled\n");
+ 			    wait_ms(1000);
+ 			    LaserSet(LASER_FIRING,p);
+printf("  2. laser firing pwm %.3f / %d %% for %d ms\n", p, m_LaserTestPower, m_LaserTestTime);
                             wait_ms(m_LaserTestTime);
-                            *laser = LASEROFF;
-                            pwm = cfg->pwmmax / 100.0;  // set pwm to max;
+ 			    LaserSet(LASER_ENABLED,0);
+printf("  3. laser enabled\n");
+ 			    wait_ms(1000);
+ 			    LaserSet(LASER_OFF,0);
+printf("  4. laser off\n");
+printf("Ended laser test\n");
                         }
                         break; 
                     case K_UP: case K_FUP:
@@ -706,7 +714,7 @@ void LaosMenu::Handle() {
                         break;
                     case K_CANCEL: 
                         {
-                            enable = cfg->enable;
+                            //XX enable = cfg->enable;
                             // home the machine:
                             while ( !mot->isStart() );
                             mot->home(cfg->xhome,cfg->yhome,cfg->zhome);
@@ -720,21 +728,24 @@ void LaosMenu::Handle() {
                 args[0]=m_LaserTestTime;
                 args[1]=m_LaserTestPower;
                 break;
-                
 
             default:
                 screen = MAIN;
                 break;
         }
         if (nodisplay == 0) {
+	    float t = laser_temp();
+            if (t > -100) {
+	       	printf("Temp: %.1f C\n", t);
+            	if (sarg == NULL) 
+               		snprintf(sarg,5,"%.1fC", t);
+            };
             dsp->ShowScreen(screens[screen], args, sarg);
         }
          prevscreen = screen;
     }
-
 }
 
 void LaosMenu::SetFileName(char * name) {
     strcpy(jobname, name);
 }
-

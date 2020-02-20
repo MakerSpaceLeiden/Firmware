@@ -87,6 +87,8 @@ public:
   * @return "true" if the key is found "false" is key is not found (default value is returned)
   */ 
     bool Value(const std::string& key, int *value, int def);
+    bool Value(const std::string& key, PinName *value, PinName def);
+    bool Value(const std::string& key, bool *value, bool def);
     
   /** See if file was present
   * @return "true" if file is open, "false" file is not found 
